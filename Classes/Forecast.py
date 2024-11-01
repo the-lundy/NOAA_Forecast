@@ -8,7 +8,8 @@ class Forecast:
                  latitude: float = 63.0692, 
                  longitude: float = 151.0070, 
                  ForecastDuration: int = 2,
-                 metrics: str = ["temperature","snowfallAmount","snowLevel","probabilityOfPrecipitation"]):
+                 metricType: str = "Default",
+                 outputUnits: str = "English"):
         # Inputs are defined as the following
         # lat = the latitude of the GPS position we want weather from - 
         # This has to be in the form of ...xxx.yyyy can not have more the 4 sig figs
@@ -33,15 +34,32 @@ class Forecast:
             longitude = round(longitude,4)
             print("Can only Forecast for four decimal points of accuracy, rounding to", longitude, "longitude")
 
+        if not (outputUnits == "Metric" or outputUnits == "English"):
+            raise ValueError("units must be either 'Metric' or 'English'")
+
+        self.metricType = metricType
+
+        if self.metricType == "Default":
+            self.metrics = ["temperature","snowfallAmount","snowLevel","probabilityOfPrecipitation"]
+        else:
+            raise ValueError(" ".join(["metrictype", self.metricType ,"Not Supported Yet"]))
+
+
+        
         self.latitude = latitude
         self.longitude = longitude
         self.ForecastDuration = ForecastDuration
 
-        self.metrics = metrics
-        self.units = [None] * len(metrics)
+        self.units = [None] * len(self.metrics)
+        self.elevationUnits = [None]
+        self.outputUnits = outputUnits
+
+        
+
 
 
     def getMetricsForecast(self):
+
         n = NOAA()
         forecast = n.points_forecast(self.latitude,self.longitude,type='forecastGridData')['properties'] 
    
@@ -52,10 +70,6 @@ class Forecast:
             self.units[i] = forecast[self.metrics[i]]['uom']
             metricValue = forecast[self.metrics[i]]['values']
 
-            # Parse the elevation and convert it from m to feet
-            C_M_FT = 3.280839895
-            elevation = forecast['elevation']['value']*C_M_FT
-                
             #Sets the inital length of the arrays
             mValue = [-999]*len(metricValue)
             timeList = [0]*len(metricValue)
@@ -67,7 +81,7 @@ class Forecast:
             daysFromNow = daysFromNow+datetime.timedelta(days=self.ForecastDuration)
             for j in range(len(metricValue)):
 
-                mValue[j] = metricValue[j]['value']
+                mValue[j] = self.convertUnits(metricValue[j]['value'],self.units[i])[0]
                 # Regex expression to remove the /PT1H from th date time, since I don't 
                 # care about the persistent time of the Forecast 
                 timeList[j] = datetime.datetime.fromisoformat(re.sub("(.(PT|P)(\d|\d\d)(H|D))","",
@@ -78,14 +92,18 @@ class Forecast:
 
                     del timeList[j+1:]
                     del mValue[j+1:]
-                    
                     break
+            #Updates the final UOM if necessary
+            self.units[i] =self.convertUnits(metricValue[j]['value'],self.units[i])[1]
             
+            
+
             outputValue[i]=mValue
             outputTime[i]=timeList
             
-            # self.plotForecast(timeList,mValue,elevation,fig,axes,i)
-
+        # Parse the elevation
+        self.elevationUnits = forecast['elevation']['unitCode']
+        elevation = self.convertUnits(forecast['elevation']['value'],self.elevationUnits )[0]
 
         return [outputValue,outputTime,elevation]
 
@@ -97,3 +115,32 @@ class Forecast:
             fig.axes[i_plt].set_xticklabels(fig.axes[i_plt].get_xticklabels(),rotation=45)
             fig.axes[i_plt].grid(visible=True)
             fig.axes[i_plt].set_title(self.metrics[i_plt])
+
+    def convertUnits(self,value,currentUnits):
+
+        valueC = value
+        unitsC = currentUnits
+               
+        #Unit Conversions
+        C_M_FT = 3.280839895
+        C_mm_M = 1/1000        
+        #Case statement to convert units
+        if self.outputUnits == "English":
+            match currentUnits:
+                case "wmoUnit:degC":
+                    valueC = value*9/5+32
+                    unitsC = "DegF"  
+                case "wmoUnit:mm":
+                    valueC = value*C_mm_M*C_M_FT
+                    unitsC = "Ft"
+                case "wmoUnit:m":
+                    valueC = value*C_M_FT
+                    unitsC = "Ft"
+                case "wmoUnit:percent":
+                    unitsC = "%"
+
+
+        return [valueC,unitsC]
+
+
+        

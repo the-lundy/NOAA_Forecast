@@ -23,7 +23,7 @@ def gps_to_map(latitude, longitude, output_file="map.html"):
 
 
 #Plot creation
-fig, axes = plt.subplots(2,2, figsize=(12, 10))
+fig, axes = plt.subplots(4,1, figsize=(12, 10))
 plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.05)
     # sner = Forecast(47.4573,-121.4558)
 
@@ -34,11 +34,14 @@ legend = ["Between Source And Snow Lake",
           "Hayk Parking Lot",
           "Kendall Adventure Zone",
           "Snow Lake"]
+
+forcastRange = 1
+
 for position in range(len(lat)):
 
     gps_to_map(lat[position],long[position],"".join([str(lat[position]),
                                                      str(long[position]),".html"]))
-    sner = Forecast(lat[position],long[position],7)
+    sner = Forecast(lat[position],long[position],forcastRange)
     [outputValue,outputTime,elevation] = sner.getMetricsForecast() 
     #Iterate through all metrics to plot
     for i in range(len(sner.metrics)):
