@@ -41,6 +41,8 @@ class Forecast:
 
         if self.metricType == "Default":
             self.metrics = ["temperature","snowfallAmount","snowLevel","probabilityOfPrecipitation"]
+        elif self.metricType == "Wind":
+            self.metrics = ["windSpeed","windChill","windDirection","windGust"]
         else:
             raise ValueError(" ".join(["metrictype", self.metricType ,"Not Supported Yet"]))
 
@@ -62,7 +64,27 @@ class Forecast:
 
         n = NOAA()
         forecast = n.points_forecast(self.latitude,self.longitude,type='forecastGridData')['properties'] 
-   
+
+        if self.metricType == "Default":
+            [outputValue,outputTime,elevation] = self.defaultMetrics(forecast)
+            return [outputValue,outputTime,elevation]
+        elif self.metricType == "Wind":
+            [outputValue,outputTime,elevation] = self.defaultMetrics(forecast)
+            return [outputValue,outputTime,elevation]
+        
+            
+
+
+    def plotForecast(self,timeList,mValue,elevation,fig,axes,i_plt):
+            fig.axes[i_plt].plot(timeList,mValue, label="".join(["Elevation: ", str(round(elevation)),"ft"]))
+            fig.axes[i_plt].set_ylabel("".join([self.metrics[i_plt],' ',self.units[i_plt]]))
+            fig.axes[i_plt].set_xlabel("Time")
+            #TODO:Fix this xticks issue for date time
+            fig.axes[i_plt].set_xticklabels(fig.axes[i_plt].get_xticklabels(),rotation=45)
+            fig.axes[i_plt].grid(visible=True)
+            fig.axes[i_plt].set_title(self.metrics[i_plt])
+
+    def defaultMetrics(self,forecast):
         outputValue = [None for _ in range(len(self.metrics))] 
         outputTime = [None for _ in range(len(self.metrics))] 
 
@@ -96,8 +118,6 @@ class Forecast:
             #Updates the final UOM if necessary
             self.units[i] =self.convertUnits(metricValue[j]['value'],self.units[i])[1]
             
-            
-
             outputValue[i]=mValue
             outputTime[i]=timeList
             
@@ -106,15 +126,6 @@ class Forecast:
         elevation = self.convertUnits(forecast['elevation']['value'],self.elevationUnits )[0]
 
         return [outputValue,outputTime,elevation]
-
-    def plotForecast(self,timeList,mValue,elevation,fig,axes,i_plt):
-            fig.axes[i_plt].plot(timeList,mValue, label="".join(["Elevation: ", str(round(elevation)),"ft"]))
-            fig.axes[i_plt].set_ylabel("".join([self.metrics[i_plt],' ',self.units[i_plt]]))
-            fig.axes[i_plt].set_xlabel("Time")
-            #TODO:Fix this xticks issue for date time
-            fig.axes[i_plt].set_xticklabels(fig.axes[i_plt].get_xticklabels(),rotation=45)
-            fig.axes[i_plt].grid(visible=True)
-            fig.axes[i_plt].set_title(self.metrics[i_plt])
 
     def convertUnits(self,value,currentUnits):
 

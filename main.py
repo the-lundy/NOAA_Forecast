@@ -56,3 +56,26 @@ fig.axes[1].legend(legend)
 now =  datetime.datetime.now()
 formatted_now = now.strftime("%Y%m%d_%H%M")
 plt.savefig("".join(["Snow_Metrics_" ,str(sner.ForecastDuration) ,"@",formatted_now,".png"]))
+
+
+fig, axes = plt.subplots(4,1, figsize=(12, 10))
+plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.05)
+
+for position in range(len(lat)):
+
+    gps_to_map(lat[position],long[position],"".join([str(lat[position]),
+                                                     str(long[position]),".html"]))
+    wind = Forecast(lat[position],long[position],forcastRange,metricType="Wind")
+    [outputValue,outputTime,elevation] = wind.getMetricsForecast() 
+    #Iterate through all metrics to plot
+    for i in range(len(wind.metrics)):
+        wind.plotForecast(outputTime[i],outputValue[i],elevation,fig,axes,i)
+
+#TODO: Make all of these properties of the object?
+fig.suptitle("Snoqualmie Pass Wind Metrics")
+plt.tight_layout()
+fig.axes[0].legend()
+fig.axes[1].legend(legend)
+now =  datetime.datetime.now()
+formatted_now = now.strftime("%Y%m%d_%H%M")
+plt.savefig("".join(["Wind_Metrics_" ,str(sner.ForecastDuration) ,"@",formatted_now,".png"]))
